@@ -6,8 +6,8 @@ from force import *
 class Window(pyglet.window.Window):
     def __init__(self, *args, **kwargs):
         pyglet.window.Window.__init__(self, *args,**kwargs)
-        self.flock = Flock(500, windowSize)
-        self.force = Force(-2500)
+        self.flock = Flock(100, windowSize)
+        self.force = Force(-250)
 
     def on_draw(self):
         glClear(pyglet.gl.GL_COLOR_BUFFER_BIT)
