@@ -27,7 +27,7 @@ class Boid:
     attract = 2.5
     align = 0.5
     avoid = 5
-    maxVel = 4
+    maxVel = 10
     maxAcc = 0.25
 
     def __init__(self, x, y, boundX, boundY):
@@ -67,6 +67,10 @@ class Boid:
         sumVel = [0, 0]
         avgVel = [0, 0]
         for boid in flock.boids:
+            # Skip itself
+            if boid == self:
+                continue
+
             # Determine r
             dX = boid.pos[0] - self.pos[0]
             dY = boid.pos[1] - self.pos[1]
@@ -117,6 +121,16 @@ class Boid:
         homeR = homeX * homeX + homeY * homeY
         self.targetV[0] += homeX / homeR * Boid.home * math.pow(count, 0.5)
         self.targetV[1] += homeY / homeR * Boid.home * math.pow(count, 0.5)
+        
+        # Avoid wall
+        if self.pos[0] < 50:
+            self.targetV[0] += 5
+        elif self.pos[0] > self.bounds[0] - 50:
+            self.targetV[0] -= 5
+        if self.pos[1] < 50:
+            self.targetV[1] += 5
+        elif self.pos[1] > self.bounds[1] - 50:
+            self.targetV[1] -= 5
 
         # Update acceleration
         self.acc[0] = self.targetV[0] - self.vel[0]
@@ -127,14 +141,14 @@ class Boid:
             self.acc[1] = self.acc[1] / rAcc * Boid.maxAcc
 
         # Limit position and velocity
-        if self.pos[0] < 0:
-            self.pos[0] = self.bounds[0]
-        elif self.pos[0] > self.bounds[0]:
-            self.pos[0] = 0
-        if self.pos[1] < 0:
-            self.pos[1] = self.bounds[1]
-        elif self.pos[1] > self.bounds[1]:
-            self.pos[1] = 0
+        if self.pos[0] < -50:
+            self.pos[0] = self.bounds[0] + 50
+        elif self.pos[0] > self.bounds[0] + 50:
+            self.pos[0] = -50
+        if self.pos[1] < -50:
+            self.pos[1] = self.bounds[1] + 50
+        elif self.pos[1] > self.bounds[1] + 50:
+            self.pos[1] = -50
 
         if self.vel[0] > Boid.maxVel:
             self.vel[0] = Boid.maxVel
