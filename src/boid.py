@@ -1,119 +1,132 @@
 from pyglet.gl import *
-from force import *
 import random
 import math
 
 class Flock:
     def __init__(self, size, bounds):
-        #self.boids = [Boid(random.randint(0, bounds), random.randint(0, bounds), bounds) for _ in range(size)]
-        self.boids = [Boid(random.randint(225, 275), random.randint(225, 275), bounds) for _ in range(size)]
+        self.boids = [Boid(random.randint(0, bounds), random.randint(0, bounds), bounds) for _ in range(size)]
+        #self.boids = [Boid(random.randint(bounds / 2 - 25, bounds / 2 + 25),
+        #    random.randint(bounds / 2 - 25, bounds / 2 + 25), bounds) for _ in range(size)]
 
     def draw(self):
         for boid in self.boids:
             boid.vertexList.draw(GL_TRIANGLES)
 
-    def update(self, force):
+    def update(self):
         for boid in self.boids:
-            boid.update(force, self)
+            boid.update(self)
 
     def addBoid(self, x, y, bounds):
         self.boids.append(Boid(x, y, bounds))
 
 class Boid:
-    vision = 100
-    repulse = -10
-    attract = 50
+    vision = 50
+    attract = 1
+    align = 1
+    avoid = 1
+    maxAcc = 0.1
 
     def __init__(self, x, y, bounds):
         self.pos = [x, y]
         self.theta = 0
-        self.vel = [5 * random.random(), 5 * random.random()]
+        self.vel = [10 * (random.random() - 0.5), 10 * (random.random() - 0.5)]
         self.acc = [0, 0]
+        self.targetV = [self.vel[0], self.vel[1]]
         self.bounds = bounds
 
-        # TODO: FIX ME
+        # TODO: FIX ME (Initialize based on theta)
         self.vertex = [self.pos[0],self.pos[1]+10,
             self.pos[0]-5,self.pos[1]-10, self.pos[0]+5,self.pos[1]-10]
 
         self.vertexList = pyglet.graphics.vertex_list(3, ('v2f', list(map(int, self.vertex))))
 
-    def update(self, force, flock):
+    def update(self, flock):
         # Update position
         self.pos[0] += self.vel[0]
         self.pos[1] += self.vel[1]
 
         # Update velocity
-        delX = force.x - self.pos[0]
-        delY = force.y - self.pos[1]
-        mul = force.magnitude / (math.pow(delX * delX + delY * delY, 1.5) + 0.0001)
-        self.vel[0] += mul * delX
-        self.vel[1] += mul * delY
+        self.vel[0] += self.acc[0]
+        self.vel[1] += self.acc[1]
 
-        # Avoid birds and go to center
-        dV = [0, 0]
+        # Reset target velocity
+        self.targetV[0] = 0
+        self.targetV[1] = 0
+
+        # Avoid boids and go to center
         sum = [0, 0]
-        dCenter = [0, 0]
         count = 0
+        dCenter = [0, 0]
+        sumSep = [0, 0]
+        countSep = 0
+        sumVel = [0, 0]
         for boid in flock.boids:
             # Determine r
             dX = boid.pos[0] - self.pos[0]
             dY = boid.pos[1] - self.pos[1]
-            r = math.pow(dX * dX + dY * dY, 0.5) + 0.0001
+            r_sq = dX * dX + dY * dY + 0.0001        # Avoid taking sqrt...
             # If in vision
-            if r < Boid.vision:
-                # Repulsion
-                dV[0] += Boid.repulse / math.pow(r, 3) * dX
-                dV[1] += Boid.repulse / math.pow(r, 3) * dY
-
-                # Attraction to center
+            if r_sq < Boid.vision * Boid.vision:
+                # Position sum
+                count += 1
                 sum[0] += boid.pos[0]
                 sum[1] += boid.pos[1]
-                count += 1
-        # Attraction to center
+
+                # Velocity sum
+                sumVel[0] += boid.vel[0]
+                sumVel[1] += boid.vel[1]
+
+                if r_sq < (Boid.vision * Boid.vision / 4):
+                    # Avoid sum
+                    countSep += 1
+                    sumSep[0] -= dX / r_sq     # r^2 force...
+                    sumSep[1] -= dY / r_sq
+
+        # Attraction to center and align vectors
         if count > 0:
+            # Attraction
             dCenter[0] = sum[0] / count - self.pos[0]
             dCenter[1] = sum[1] / count - self.pos[1]
-            mCenter = Boid.attract / (math.pow(dCenter[0] * dCenter[0] + dCenter[1] * dCenter[1], 1.5) + 0.0001)
-            dV[0] += mCenter * dCenter[0]
-            dV[1] += mCenter * dCenter[1]
+            rCenter = math.pow(dCenter[0] * dCenter[0] + dCenter[1] * dCenter[1], 0.5) + 0.0001
+            self.targetV[0] += dCenter[0] / rCenter * Boid.attract
+            self.targetV[1] += dCenter[1] / rCenter * Boid.attract
 
-        # Avoid wall    # TODO: MAYBE SHOULD MAKE BOID TURN PARALLEL TO WALL
-        f = 0.5
-        if self.bounds - self.pos[0] < 25:
-            dV[0] -= f
-            dV[1] -= f  # Try avoiding ccw?
-        elif self.pos[0] < 25:
-            dV[0] += f
-            dV[1] += f
-        if self.bounds - self.pos[1] < 25:
-            dV[1] -= f
-            dV[0] += f
-        elif self.pos[1] < 25:
-            dV[1] += f
-            dV[0] -= f
+            # Alignment
+            self.targetV[0] += sumVel[0] / count * Boid.align
+            self.targetV[1] += sumVel[1] / count * Boid.align
 
-        # Update velocity for avoidance and center attraction
-        self.vel[0] += dV[0]
-        self.vel[1] += dV[1]
+        # Avoid boids
+        if countSep > 0:
+            rCenter = math.pow(sumSep[0] * sumSep[0] + sumSep[1] * sumSep[1], 0.5) + 0.0001
+            self.targetV[0] += sumSep[0] / rCenter * Boid.avoid
+            self.targetV[1] += sumSep[1] / rCenter * Boid.avoid
+
+        # Update acceleration
+        self.acc[0] = self.targetV[0] - self.vel[0]
+        self.acc[1] = self.targetV[1] - self.vel[1]
+        rAcc = math.pow(self.acc[0] * self.acc[0] + self.acc[1] * self.acc[1], 0.5) + 0.0001
+        if rAcc > Boid.maxAcc:
+            self.acc[0] = self.acc[0] / rAcc * Boid.maxAcc
+            self.acc[1] = self.acc[1] / rAcc * Boid.maxAcc
 
         # Limit position and velocity
-        #if self.pos[0] < 0:
-        #    self.pos[0] = self.bounds
-        #elif self.pos[0] > self.bounds:
-        #    self.pos[0] = 0
-        #if self.pos[1] < 0:
-        #    self.pos[1] = self.bounds
-        #elif self.pos[1] > self.bounds:
-        #    self.pos[1] = 0
+        if self.pos[0] < 0:
+            self.pos[0] = self.bounds
+        elif self.pos[0] > self.bounds:
+            self.pos[0] = 0
+        if self.pos[1] < 0:
+            self.pos[1] = self.bounds
+        elif self.pos[1] > self.bounds:
+            self.pos[1] = 0
 
-        if self.vel[0] > 5:
-            self.vel[0] = 5
-        elif self.vel[0] < -5:
-            self.vel[0] = -5
-        if self.vel[1] > 5:
-            self.vel[1] = 5
-        elif self.vel[1] < -5:
-            self.vel[1] = -5
+        if self.vel[0] > 3:
+            self.vel[0] = 3
+        elif self.vel[0] < -3:
+            self.vel[0] = -3
+        if self.vel[1] > 3:
+            self.vel[1] = 3
+        elif self.vel[1] < -3:
+            self.vel[1] = -3
 
         # Calculate vertex positions
         # CCW from x

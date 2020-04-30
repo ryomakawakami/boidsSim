@@ -2,8 +2,8 @@
 
 TODO:
 
-Make wall avoidance better (make boid parallel to wall in the direction closer)
+Avoid wall
 
-Add velocity vector alignment
+Add min speed?
 
 Feed the boids
