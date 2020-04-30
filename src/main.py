@@ -5,7 +5,7 @@ from boid import *
 class Window(pyglet.window.Window):
     def __init__(self, *args, **kwargs):
         pyglet.window.Window.__init__(self, *args,**kwargs)
-        self.flock = Flock(100, windowSize)
+        self.flock = Flock(150, windowSize[0], windowSize[1])
 
     def on_draw(self):
         glClear(pyglet.gl.GL_COLOR_BUFFER_BIT)
@@ -20,9 +20,9 @@ class Window(pyglet.window.Window):
         self.flock.update()
         self.flock.draw()
 
-windowSize = 600
+windowSize = [1200, 600]
 
-window = Window(width = windowSize, height = windowSize, caption = 'Boids')
+window = Window(width = windowSize[0], height = windowSize[1], caption = 'Boids')
 
 pyglet.clock.schedule_interval(window.update, 1/30)
 pyglet.app.run()

@@ -3,8 +3,8 @@ import random
 import math
 
 class Flock:
-    def __init__(self, size, bounds):
-        self.boids = [Boid(random.randint(0, bounds), random.randint(0, bounds), bounds) for _ in range(size)]
+    def __init__(self, size, boundX, boundY):
+        self.boids = [Boid(random.randint(0, boundX), random.randint(0, boundY), boundX, boundY) for _ in range(size)]
         #self.boids = [Boid(random.randint(bounds / 2 - 25, bounds / 2 + 25),
         #    random.randint(bounds / 2 - 25, bounds / 2 + 25), bounds) for _ in range(size)]
 
@@ -21,20 +21,22 @@ class Flock:
         self.boids.append(Boid(x, y, bounds))
 
 class Boid:
-    vision = 50
-    attract = 0.5
-    align = 1
-    avoid = 1.5
-    maxVel = 5
+    vision = 75
+    avoidVision = 20
+    home = 50
+    attract = 2.5
+    align = 0.5
+    avoid = 5
+    maxVel = 4
     maxAcc = 0.25
 
-    def __init__(self, x, y, bounds):
+    def __init__(self, x, y, boundX, boundY):
         self.pos = [x, y]
         self.theta = 0
         self.vel = [Boid.maxVel * 2 * (random.random() - 0.5), Boid.maxVel * 2 * (random.random() - 0.5)]
         self.acc = [0, 0]
         self.targetV = [self.vel[0], self.vel[1]]
-        self.bounds = bounds
+        self.bounds = [boundX, boundY]
         self.color = [random.random(), random.random(), random.random()]
 
         # TODO: FIX ME (Initialize based on theta)
@@ -80,7 +82,7 @@ class Boid:
                 sumVel[0] += boid.vel[0]
                 sumVel[1] += boid.vel[1]
 
-                if r_sq < (Boid.vision * Boid.vision / 4):
+                if r_sq < Boid.avoidVision * Boid.avoidVision:
                     # Avoid sum
                     countSep += 1
                     sumSep[0] -= dX / r_sq     # r^2 force...
@@ -99,14 +101,22 @@ class Boid:
             avgVel[0] = sumVel[0] / count
             avgVel[1] = sumVel[1] / count
             speed = math.pow(avgVel[0] * avgVel[0] + avgVel[1] * avgVel[1], 0.5) + 0.0001
-            self.targetV[0] += sumVel[0] / speed * Boid.align
-            self.targetV[1] += sumVel[1] / speed * Boid.align
+            velP = abs(math.atan2(self.vel[1], self.vel[0]) - math.atan2(avgVel[1], avgVel[0]))
+            self.targetV[0] += sumVel[0] / speed * Boid.align * velP
+            self.targetV[1] += sumVel[1] / speed * Boid.align * velP
 
         # Avoid boids
         if countSep > 0:
             rCenter = math.pow(sumSep[0] * sumSep[0] + sumSep[1] * sumSep[1], 0.5) + 0.0001
             self.targetV[0] += sumSep[0] / rCenter * Boid.avoid
             self.targetV[1] += sumSep[1] / rCenter * Boid.avoid
+
+        # Attraction to center of screen
+        homeX = self.bounds[0] / 2 - self.pos[0]
+        homeY = self.bounds[1] / 2 - self.pos[1]
+        homeR = homeX * homeX + homeY * homeY
+        self.targetV[0] += homeX / homeR * Boid.home * math.pow(count, 0.5)
+        self.targetV[1] += homeY / homeR * Boid.home * math.pow(count, 0.5)
 
         # Update acceleration
         self.acc[0] = self.targetV[0] - self.vel[0]
@@ -118,12 +128,12 @@ class Boid:
 
         # Limit position and velocity
         if self.pos[0] < 0:
-            self.pos[0] = self.bounds
-        elif self.pos[0] > self.bounds:
+            self.pos[0] = self.bounds[0]
+        elif self.pos[0] > self.bounds[0]:
             self.pos[0] = 0
         if self.pos[1] < 0:
-            self.pos[1] = self.bounds
-        elif self.pos[1] > self.bounds:
+            self.pos[1] = self.bounds[1]
+        elif self.pos[1] > self.bounds[1]:
             self.pos[1] = 0
 
         if self.vel[0] > Boid.maxVel:
