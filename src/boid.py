@@ -10,6 +10,7 @@ class Flock:
 
     def draw(self):
         for boid in self.boids:
+            glColor3f(boid.color[0], boid.color[1], boid.color[2])
             boid.vertexList.draw(GL_TRIANGLES)
 
     def update(self):
@@ -21,18 +22,20 @@ class Flock:
 
 class Boid:
     vision = 50
-    attract = 1
+    attract = 0.5
     align = 1
-    avoid = 1
-    maxAcc = 0.1
+    avoid = 1.5
+    maxVel = 5
+    maxAcc = 0.25
 
     def __init__(self, x, y, bounds):
         self.pos = [x, y]
         self.theta = 0
-        self.vel = [10 * (random.random() - 0.5), 10 * (random.random() - 0.5)]
+        self.vel = [Boid.maxVel * 2 * (random.random() - 0.5), Boid.maxVel * 2 * (random.random() - 0.5)]
         self.acc = [0, 0]
         self.targetV = [self.vel[0], self.vel[1]]
         self.bounds = bounds
+        self.color = [random.random(), random.random(), random.random()]
 
         # TODO: FIX ME (Initialize based on theta)
         self.vertex = [self.pos[0],self.pos[1]+10,
@@ -60,6 +63,7 @@ class Boid:
         sumSep = [0, 0]
         countSep = 0
         sumVel = [0, 0]
+        avgVel = [0, 0]
         for boid in flock.boids:
             # Determine r
             dX = boid.pos[0] - self.pos[0]
@@ -92,8 +96,11 @@ class Boid:
             self.targetV[1] += dCenter[1] / rCenter * Boid.attract
 
             # Alignment
-            self.targetV[0] += sumVel[0] / count * Boid.align
-            self.targetV[1] += sumVel[1] / count * Boid.align
+            avgVel[0] = sumVel[0] / count
+            avgVel[1] = sumVel[1] / count
+            speed = math.pow(avgVel[0] * avgVel[0] + avgVel[1] * avgVel[1], 0.5) + 0.0001
+            self.targetV[0] += sumVel[0] / speed * Boid.align
+            self.targetV[1] += sumVel[1] / speed * Boid.align
 
         # Avoid boids
         if countSep > 0:
@@ -119,14 +126,14 @@ class Boid:
         elif self.pos[1] > self.bounds:
             self.pos[1] = 0
 
-        if self.vel[0] > 3:
-            self.vel[0] = 3
-        elif self.vel[0] < -3:
-            self.vel[0] = -3
-        if self.vel[1] > 3:
-            self.vel[1] = 3
-        elif self.vel[1] < -3:
-            self.vel[1] = -3
+        if self.vel[0] > Boid.maxVel:
+            self.vel[0] = Boid.maxVel
+        elif self.vel[0] < -Boid.maxVel:
+            self.vel[0] = -Boid.maxVel
+        if self.vel[1] > Boid.maxVel:
+            self.vel[1] = Boid.maxVel
+        elif self.vel[1] < -Boid.maxVel:
+            self.vel[1] = -Boid.maxVel
 
         # Calculate vertex positions
         # CCW from x
