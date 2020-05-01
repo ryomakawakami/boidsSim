@@ -10,9 +10,11 @@ Boids calculate cohesion by finding the CM of all boids in visible range excludi
 
 Boids calculate separation only with the boids in their bubble.
 
-Boids calculate alignment by finding the average velocity of all boids  in visible range excluding itself.
+Boids calculate alignment by finding the average velocity of all boids in visible range excluding itself.
 
-There are some arbitrary decisions I've made to make this more realistic (a lot of random factors multplied in).
+There are some arbitrary decisions I've made to make this more realistic. Home force is increased by a factor 
+of the square root of the number of boids in vision. Alignment force is weakened linearly as a function of 
+how close the current heading is to the desired heading (kP-like).
 
 ### Parameters
 []()  | []()
@@ -28,10 +30,12 @@ There are some arbitrary decisions I've made to make this more realistic (a lot 
 
 TODO:
 
-Add min speed?
+* Add min speed for birds that are sitting there
 
-Add blind spot
+* Add blind spot
 
-Flock color should be randomly chosen from flock, weighted pdf based on how close to average it is
+* Add sliders and reset button
 
-Feed the boids
+* Flock color should be randomly chosen from flock, weighted pdf based on how close to average it is
+
+* Feed the boids

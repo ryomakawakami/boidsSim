@@ -27,7 +27,7 @@ class Boid:
     attract = 2.5
     align = 0.5
     avoid = 5
-    maxVel = 10
+    maxVel = 5
     maxAcc = 0.25
 
     def __init__(self, x, y, boundX, boundY):
@@ -106,7 +106,7 @@ class Boid:
             avgVel[1] = sumVel[1] / count
             speed = math.pow(avgVel[0] * avgVel[0] + avgVel[1] * avgVel[1], 0.5) + 0.0001
             velP = abs(math.atan2(self.vel[1], self.vel[0]) - math.atan2(avgVel[1], avgVel[0]))
-            self.targetV[0] += sumVel[0] / speed * Boid.align * velP
+            self.targetV[0] += sumVel[0] / speed * Boid.align * velP # Having this velP makes flocks slower
             self.targetV[1] += sumVel[1] / speed * Boid.align * velP
 
         # Avoid boids
